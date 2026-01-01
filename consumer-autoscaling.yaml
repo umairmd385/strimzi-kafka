@@ -1,0 +1,51 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: dev-kafka-consumer
+  namespace: default
+  labels:
+    app: kafka-consumer
+spec:
+  scaleTargetRef:
+    name: kafka-consumer
+  pollingInterval: 30 
+  cooldownPeriod: 300
+
+  # Hard safety limits
+  minReplicaCount: 1 
+  maxReplicaCount: 20 
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 60
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+            - type: Percent
+              value: 50
+              periodSeconds: 60
+
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: >
+          dev-kafka-cluster-dev-kafka-nodepool-broker-0.dev-kafka-cluster-kafka-brokers.kafka.svc.cluster.local:9092,
+          dev-kafka-cluster-dev-kafka-nodepool-broker-1.dev-kafka-cluster-kafka-brokers.kafka.svc.cluster.local:9092,
+          dev-kafka-cluster-dev-kafka-nodepool-broker-2.dev-kafka-cluster-kafka-brokers.kafka.svc.cluster.local:9092
+        consumerGroup: consumer_1_wallet_main_Service
+        topic: REGISTER
+        lagThreshold: "50"
+        offsetResetPolicy: latest
+
+    - type: kafka
+      metadata:
+        bootstrapServers: dev-kafka-cluster-dev-kafka-nodepool-broker-0.dev-kafka-cluster-kafka-brokers.kafka.svc.cluster.local:9092,dev-kafka-cluster-dev-kafka-nodepool-broker-1.dev-kafka-cluster-kafka-brokers.kafka.svc.cluster.local:9092,dev-kafka-cluster-dev-kafka-nodepool-broker-2.dev-kafka-cluster-kafka-brokers.kafka.svc.cluster.local:9092
+        consumerGroup: consumer_1_wallet_main_Service
+        topic: VERIFY_LOGIN
+        lagThreshold: "50"
